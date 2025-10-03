@@ -1,0 +1,62 @@
+#include<stdio.h>
+#include<string.h>
+
+char result[20][20], copy[20], states[20][20];
+
+void add_state(char a[20], int i){ 
+    strcpy(result[i], a); 
+}
+
+void display(int n){ 
+    int k=0; 
+    printf("\nEpsilon closure of %s = { ", copy); 
+    while(k < n){ 
+        printf(" %s", result[k]); 
+        if(k < n-1) printf(",");  
+        k++; 
+    } 
+    printf(" }\n"); 
+}
+
+int main(){ 
+    FILE* ipfile; 
+    ipfile = fopen("input.txt", "r"); 
+    if(ipfile == NULL){
+        printf("Error: could not open input.txt\n");
+        return 1;
+    }
+
+    char state[20], state1[20], state2[20], input[20]; 
+    int end, i=0, n, k=0;   
+
+    printf("\nEnter the number of states: "); 
+    scanf("%d",&n); 
+
+    printf("\nEnter the states: "); 
+    for(k=0; k<n; k++)   //
+        scanf("%s", states[k]);   
+
+    for(k=0; k<n; k++){ 
+        i=0; 
+        strcpy(state, states[k]); 
+        strcpy(copy, state); 
+        add_state(state, i++);   // closure always includes itself
+
+        while(1){ 
+            end = fscanf(ipfile,"%s%s%s", state1, input, state2); 
+            if(end == EOF) 
+                break;       
+
+            if(strcmp(state, state1) == 0 && strcmp(input,"e") == 0){ 
+                add_state(state2, i++); 
+                strcpy(state, state2); 
+            } 
+        } 
+
+        display(i); 
+        rewind(ipfile);  // reset file pointer for next state
+    } 
+
+    fclose(ipfile);   
+    return 0; 
+}
