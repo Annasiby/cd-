@@ -1,63 +1,173 @@
-#include<stdio.h>
-#include<string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-char result[20][20], copy[20], states[20][20];
+struct node {
+    int st;
+    struct node *link;
+};
 
-void add_state(char a[20], int i){ 
-    strcpy(result[i], a); 
+static int set[20], nostate, noalpha, s, notransition, nofinal,
+           start, finalstate[20], c, r, buffer[20], newstate;
+char alphabet[20];
+static int e_closure[20][20] = {0};
+struct node *transition[20][20] = {NULL};
+
+int findalpha(char c) {
+    for (int i = 0; i < noalpha; i++)
+        if (alphabet[i] == c)
+            return i;
+    return 999;
 }
 
-void display(int n){ 
-    int k=0; 
-    printf("\nEpsilon closure of %s = { ", copy); 
-    while(k < n){ 
-        printf(" %s", result[k]); 
-        if(k < n-1) printf(",");  // avoid extra comma at the end
-        k++; 
-    } 
-    printf(" }\n"); 
+void insert_trantbl(int r, char c, int s) {
+    int j = findalpha(c);
+    if (j == 999) {
+        printf("error\n");
+        exit(0);
+    }
+    struct node *temp = (struct node *)malloc(sizeof(struct node));
+    temp->st = s;
+    temp->link = transition[r][j];
+    transition[r][j] = temp;
 }
 
-int main(){ 
-    FILE* ipfile; 
-    ipfile = fopen("input.txt", "r"); 
-    if(ipfile == NULL){
-        printf("Error: could not open input.txt\n");
-        return 1;
+void findclosure(int x, int sta) {
+    if (buffer[x]) return;
+    e_closure[sta][c++] = x;
+    buffer[x] = 1;
+
+    // check epsilon transitions (epsilon is last alphabet)
+    if (alphabet[noalpha - 1] == 'e' && transition[x][noalpha - 1] != NULL) {
+        struct node *temp = transition[x][noalpha - 1];
+        while (temp != NULL) {
+            findclosure(temp->st, sta);
+            temp = temp->link;
+        }
+    }
+}
+
+void unionclosure(int i) {
+    int j = 0, k;
+    while (e_closure[i][j] != 0) {
+        k = e_closure[i][j];
+        set[k] = 1;
+        j++;
+        newstate++;
+    }
+}
+
+void print_e_closure(int i) {
+    int j;
+    printf("{");
+    for (j = 0; e_closure[i][j] != 0; j++)
+        printf("q%d,", e_closure[i][j]);
+    printf("}");
+}
+
+void findfinalstate() {
+    int i, j, k;
+    for (i = 0; i < nofinal; i++) {
+        for (j = 1; j <= nostate; j++) {
+            for (k = 0; e_closure[j][k] != 0; k++) {
+                if (e_closure[j][k] == finalstate[i]) {
+                    printf("q%d ", j);
+                    break;
+                }
+            }
+        }
+    }
+    printf("\n");
+}
+
+int main() {
+    int i, j, k, m, t, n;
+    struct node *temp;
+
+    printf("Enter the number of alphabets: ");
+    scanf("%d", &noalpha);
+    getchar();
+    printf("NOTE:- [use letter e as epsilon, must be last]\n");
+    printf("\nEnter alphabets: ");
+    for (i = 0; i < noalpha; i++) {
+        alphabet[i] = getchar();
+        getchar();
     }
 
-    char state[20], state1[20], state2[20], input[20]; 
-    int end, i=0, n, k=0;   
+    printf("Enter the number of states: ");
+    scanf("%d", &nostate);
+    printf("Enter the start state: ");
+    scanf("%d", &start);
+    printf("Enter the number of final states: ");
+    scanf("%d", &nofinal);
+    printf("Enter the final states: ");
+    for (i = 0; i < nofinal; i++)
+        scanf("%d", &finalstate[i]);
+    printf("Enter no of transitions: ");
+    scanf("%d", &notransition);
+    printf("NOTE:- [Transition format: qno alphabet qno]\n");
+    printf("NOTE:- [States are numbered starting from 1]\n");
 
-    printf("\nEnter the number of states: "); 
-    scanf("%d",&n); 
+    printf("\nEnter transitions--\n");
+    for (i = 0; i < notransition; i++) {
+        char ch;
+        scanf("%d %c%d", &r, &ch, &s);
+        insert_trantbl(r, ch, s);
+    }
 
-    printf("\nEnter the states: "); 
-    for(k=0; k<n; k++)   // ✅ fixed loop
-        scanf("%s", states[k]);   
+    // compute epsilon closure for each state
+    for (i = 1; i <= nostate; i++) {
+        c = 0;
+        for (j = 0; j < 20; j++) {
+            buffer[j] = 0;
+            e_closure[i][j] = 0;
+        }
+        findclosure(i, i);
+    }
 
-    for(k=0; k<n; k++){ 
-        i=0; 
-        strcpy(state, states[k]); 
-        strcpy(copy, state); 
-        add_state(state, i++);   // closure always includes itself
+    printf("\nEquivalent NFA without epsilon\n");
+    printf("-----------------------------------\n");
+    printf("Start state: q%d\n", start);
 
-        while(1){ 
-            end = fscanf(ipfile,"%s%s%s", state1, input, state2); 
-            if(end == EOF) 
-                break;       
+    printf("Alphabets: ");
+    for (i = 0; i < noalpha; i++)
+        if (alphabet[i] != 'e')
+            printf("%c ", alphabet[i]);
 
-            if(strcmp(state, state1) == 0 && strcmp(input,"e") == 0){ 
-                add_state(state2, i++); 
-                strcpy(state, state2); 
-            } 
-        } 
+    printf("\nStates:");
+    for (i = 1; i <= nostate; i++)
+        printf(" q%d", i);
 
-        display(i); 
-        rewind(ipfile);  // reset file pointer for next state
-    } 
+    printf("\nTransitions:\n");
+    for (i = 1; i <= nostate; i++) {
+        for (j = 0; j < noalpha - 1; j++) {  // exclude epsilon
+            for (m = 1; m <= nostate; m++)
+                set[m] = 0;
+            newstate = 0;
 
-    fclose(ipfile);   // ✅ fixed
-    return 0; 
+            for (k = 0; e_closure[i][k] != 0; k++) {
+                t = e_closure[i][k];
+                temp = transition[t][j];
+                while (temp != NULL) {
+                    unionclosure(temp->st);
+                    temp = temp->link;
+                }
+            }
+
+            if (newstate == 0) continue;  // no transition
+
+            printf("\t");
+            print_e_closure(i);
+            printf(" --%c--> {", alphabet[j]);
+            for (n = 1; n <= nostate; n++) {
+                if (set[n] != 0)
+                    printf("q%d,", n);
+            }
+            printf("}\n");
+        }
+    }
+
+    printf("Final states: ");
+    findfinalstate();
+
+    return 0;
 }
-
