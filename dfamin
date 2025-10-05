@@ -203,3 +203,132 @@ int main() {
 
      print_dfa_table(OptDFA, N_optDFA_states, N_symbols, NEW_finals); 
 }
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX 100
+
+int dfa[MAX][MAX];       // DFA transition table
+int final[MAX];          // Final states
+int reachable[MAX];      // Reachable states
+int distinguishable[MAX][MAX]; // Table for distinguishable pairs
+int state_count, symbol_count;
+
+// DFS to mark reachable states
+void dfs(int state) {
+    if (reachable[state]) return;
+    reachable[state] = 1;
+    for (int a = 0; a < symbol_count; a++) {
+        dfs(dfa[state][a]);
+    }
+}
+
+// Step 1: Remove unreachable states
+void find_reachable() {
+    dfs(0); // assuming start state is q0
+}
+
+// Step 2: Table-filling algorithm
+void mark_distinguishable() {
+    for (int i = 0; i < state_count; i++) {
+        for (int j = 0; j < i; j++) {
+            if ((final[i] && !final[j]) || (!final[i] && final[j])) {
+                distinguishable[i][j] = 1;
+            }
+        }
+    }
+
+    int changed;
+    do {
+        changed = 0;
+        for (int i = 0; i < state_count; i++) {
+            for (int j = 0; j < i; j++) {
+                if (!distinguishable[i][j]) {
+                    for (int a = 0; a < symbol_count; a++) {
+                        int p = dfa[i][a], q = dfa[j][a];
+                        if (p == q) continue;
+                        if (p > q) { int temp = p; p = q; q = temp; }
+                        if (distinguishable[q][p]) {
+                            distinguishable[i][j] = 1;
+                            changed = 1;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    } while (changed);
+}
+
+// Step 3: Build minimized DFA
+void build_minimized_dfa() {
+    int group[MAX] = {-1}; // group[i] = representative of i
+    int new_state[MAX] = {-1};
+    int new_dfa[MAX][MAX];
+    int new_final[MAX] = {0};
+    int new_count = 0;
+
+    for (int i = 0; i < state_count; i++) {
+        if (!reachable[i]) continue;
+        if (group[i] != -1) continue;
+
+        group[i] = i;
+        for (int j = 0; j < i; j++) {
+            if (!reachable[j]) continue;
+            if (!distinguishable[i][j]) {
+                group[j] = i;
+            }
+        }
+        new_state[i] = new_count++;
+    }
+
+    // Build new DFA
+    for (int i = 0; i < state_count; i++) {
+        if (group[i] != i) continue;
+        int rep = i;
+        for (int a = 0; a < symbol_count; a++) {
+            int target = dfa[rep][a];
+            new_dfa[new_state[rep]][a] = new_state[group[target]];
+        }
+        if (final[rep]) new_final[new_state[rep]] = 1;
+    }
+
+    // Print minimized DFA
+    printf("\nMinimized DFA Transition Table:\n");
+    for (int i = 0; i < new_count; i++) {
+        printf("State %d%s: ", i, new_final[i] ? " (final)" : "");
+        for (int a = 0; a < symbol_count; a++) {
+            printf(" --%d--> %d ", a, new_dfa[i][a]);
+        }
+        printf("\n");
+    }
+}
+
+int main() {
+    printf("Enter number of DFA states: ");
+    scanf("%d", &state_count);
+
+    printf("Enter number of input symbols: ");
+    scanf("%d", &symbol_count);
+
+    printf("Enter DFA transition table:\n");
+    for (int i = 0; i < state_count; i++) {
+        for (int a = 0; a < symbol_count; a++) {
+            printf("From q%d on symbol %d: ", i, a);
+            scanf("%d", &dfa[i][a]);
+        }
+    }
+
+    printf("Enter final states (1 for final, 0 for non-final):\n");
+    for (int i = 0; i < state_count; i++) {
+        printf("Is q%d final? ", i);
+        scanf("%d", &final[i]);
+    }
+
+    find_reachable();
+    mark_distinguishable();
+    build_minimized_dfa();
+
+    return 0;
+} 
