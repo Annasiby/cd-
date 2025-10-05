@@ -180,3 +180,132 @@ int main(void) {
     return 0;
 }
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_STATES 10
+#define MAX_SYMBOLS 10
+#define MAX_DFA_STATES 50
+
+int nfa[MAX_STATES][MAX_SYMBOLS + 1][MAX_STATES]; // +1 for epsilon
+int nfa_count[MAX_STATES][MAX_SYMBOLS + 1];
+int nfa_states, symbols;
+
+int dfa[MAX_DFA_STATES][MAX_SYMBOLS];
+int dfa_state_sets[MAX_DFA_STATES][MAX_STATES];
+int dfa_set_size[MAX_DFA_STATES];
+int dfa_total = 0;
+
+int inSet(int set[], int size, int val) {
+    for (int i = 0; i < size; i++)
+        if (set[i] == val) return 1;
+    return 0;
+}
+
+void epsilonClosure(int state, int closure[], int *size) {
+    if (!inSet(closure, *size, state)) {
+        closure[(*size)++] = state;
+        for (int i = 0; i < nfa_count[state][symbols]; i++) {
+            int next = nfa[state][symbols][i];
+            epsilonClosure(next, closure, size);
+        }
+    }
+}
+
+void epsilonClosureSet(int set[], int size, int closure[], int *closureSize) {
+    *closureSize = 0;
+    for (int i = 0; i < size; i++)
+        epsilonClosure(set[i], closure, closureSize);
+}
+
+int equalSets(int a[], int b[], int sizeA, int sizeB) {
+    if (sizeA != sizeB) return 0;
+    for (int i = 0; i < sizeA; i++)
+        if (!inSet(b, sizeB, a[i])) return 0;
+    return 1;
+}
+
+int findSetIndex(int set[], int size) {
+    for (int i = 0; i < dfa_total; i++)
+        if (equalSets(set, dfa_state_sets[i], size, dfa_set_size[i])) return i;
+    return -1;
+}
+
+void printDFA() {
+    printf("\nDFA Transition Table:\n");
+    printf("State\\Symbol");
+    for (int i = 0; i < symbols; i++) printf("\t%c", 'a' + i);
+    printf("\n");
+
+    for (int i = 0; i < dfa_total; i++) {
+        printf("D%d\t\t", i);
+        for (int j = 0; j < symbols; j++) {
+            if (dfa[i][j] == -1) printf("-\t");
+            else printf("D%d\t", dfa[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+int main() {
+    printf("Enter number of NFA states: ");
+    scanf("%d", &nfa_states);
+    printf("Enter number of input symbols: ");
+    scanf("%d", &symbols);
+
+    memset(nfa_count, 0, sizeof(nfa_count));
+    memset(dfa, -1, sizeof(dfa));
+
+    printf("Enter transitions (from symbol to), use 'e' for epsilon. Enter -1 - -1 to stop:\n");
+    int from, to;
+    char sym;
+    while (1) {
+        scanf("%d %c %d", &from, &sym, &to);
+        if (from == -1) break;
+        int index = (sym == 'e') ? symbols : sym - 'a';
+        nfa[from][index][nfa_count[from][index]++] = to;
+    }
+
+    int startSet[MAX_STATES], startSize = 0;
+    epsilonClosure(0, startSet, &startSize);
+    memcpy(dfa_state_sets[0], startSet, sizeof(int) * startSize);
+    dfa_set_size[0] = startSize;
+    dfa_total = 1;
+
+    int front = 0;
+    while (front < dfa_total) {
+        int *currentSet = dfa_state_sets[front];
+        int currentSize = dfa_set_size[front];
+
+        for (int s = 0; s < symbols; s++) {
+            int moveSet[MAX_STATES], moveSize = 0;
+
+            for (int i = 0; i < currentSize; i++) {
+                int state = currentSet[i];
+                for (int j = 0; j < nfa_count[state][s]; j++) {
+                    int next = nfa[state][s][j];
+                    if (!inSet(moveSet, moveSize, next))
+                        moveSet[moveSize++] = next;
+                }
+            }
+
+            int closure[MAX_STATES], closureSize;
+            epsilonClosureSet(moveSet, moveSize, closure, &closureSize);
+
+            if (closureSize == 0) continue;
+
+            int idx = findSetIndex(closure, closureSize);
+            if (idx == -1) {
+                idx = dfa_total++;
+                memcpy(dfa_state_sets[idx], closure, sizeof(int) * closureSize);
+                dfa_set_size[idx] = closureSize;
+            }
+            dfa[front][s] = idx;
+        }
+        front++;
+    }
+
+    printDFA();
+    return 0;
+}
