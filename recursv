@@ -1,0 +1,93 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+char input[100];
+int ip_ptr = 0;
+
+void advance() {
+    ip_ptr++;
+}
+
+void match(char expected) {
+    if (input[ip_ptr] == expected) {
+        advance();
+    } else {
+        printf("Syntax error: expected '%c', found '%c'\n", expected, input[ip_ptr]);
+        exit(1);
+    }
+}
+
+void E();
+void E_prime();
+void T();
+void T_prime();
+void F();
+
+void E() {
+    printf("E → T E'\n");
+    T();
+    E_prime();
+}
+
+void E_prime() {
+    if (input[ip_ptr] == '+') {
+        printf("E' → + T E'\n");
+        match('+');
+        T();
+        E_prime();
+    } else {
+        printf("E' → ε\n");
+    }
+}
+
+void T() {
+    printf("T → F T'\n");
+    F();
+    T_prime();
+}
+
+void T_prime() {
+    if (input[ip_ptr] == '*') {
+        printf("T' → * F T'\n");
+        match('*');
+        F();
+        T_prime();
+    } else {
+        printf("T' → ε\n");
+    }
+}
+
+void F() {
+    if (input[ip_ptr] == 'i') {
+        printf("F → i\n");
+        match('i');
+    } else if (input[ip_ptr] == '(') {
+        printf("F → ( E )\n");
+        match('(');
+        E();
+        match(')');
+    } else {
+        printf("Syntax error: unexpected symbol '%c'\n", input[ip_ptr]);
+        exit(1);
+    }
+}
+
+int main() {
+    printf("Grammar:\n");
+    printf("E → T E'\nE' → + T E' | ε\nT → F T'\nT' → * F T' | ε\nF → ( E ) | i\n\n");
+
+    printf("Enter input string (use 'i' for identifiers): ");
+    scanf("%s", input);
+
+    printf("\nParsing steps:\n");
+    E();
+
+    if (input[ip_ptr] == '\0') {
+        printf("\nParsing successful!\n");
+    } else {
+        printf("\nSyntax error: unexpected symbol '%c' at end\n", input[ip_ptr]);
+    }
+
+    return 0;
+}
