@@ -1,3 +1,74 @@
+#include <stdio.h>
+#include <string.h>
+
+#define MAX 100
+
+int nStates;
+int epsilon[MAX][MAX];       // ε-transitions: epsilon[from][i] = to
+int epsilonCount[MAX];       // Number of ε-transitions from each state
+int closure[MAX][MAX];       // closure[state][i] = state in ε-closure
+int closureSize[MAX];        // Number of states in ε-closure[state]
+int visited[MAX];            // Visited array for DFS
+
+void dfs(int from, int current) {
+    for (int i = 0; i < epsilonCount[from]; i++) {
+        int next = epsilon[from][i];
+        if (!visited[next]) {
+            visited[next] = 1;
+            closure[current][closureSize[current]++] = next;
+            dfs(next, current);
+        }
+    }
+}
+
+void computeClosures() {
+    for (int i = 0; i < nStates; i++) {
+        memset(visited, 0, sizeof(visited));
+        visited[i] = 1;
+        closureSize[i] = 0;
+        closure[i][closureSize[i]++] = i;
+        dfs(i, i);
+    }
+}
+
+void printClosures() {
+    printf("\nEpsilon Closures:\n");
+    for (int i = 0; i < nStates; i++) {
+        printf("ε-closure(q%d): { ", i);
+        for (int j = 0; j < closureSize[i]; j++) {
+            printf("q%d ", closure[i][j]);
+        }
+        printf("}\n");
+    }
+}
+
+int main() {
+    int nEps;
+    printf("Enter number of states: ");
+    scanf("%d", &nStates);
+
+    printf("Enter number of ε-transitions: ");
+    scanf("%d", &nEps);
+
+    printf("Enter ε-transitions (from to):\n");
+    for (int i = 0; i < nEps; i++) {
+        int from, to;
+        scanf("%d %d", &from, &to);
+        epsilon[from][epsilonCount[from]++] = to;
+    }
+
+    computeClosures();
+    printClosures();
+
+    return 0;
+}
+
+
+
+
+
+
+
 #include<stdio.h>
 #include<string.h>
 
