@@ -1,3 +1,132 @@
+
+****************************************************************************
+#include <stdio.h>
+#include <string.h>
+
+#define MAX 100
+
+int nStates, nSymbols;
+char symbols[MAX];
+
+int epsilon[MAX][MAX], epsilonCount[MAX];
+int nfa[MAX][MAX][MAX], nfaCount[MAX][MAX];
+int closure[MAX][MAX], closureSize[MAX];
+int result[MAX][MAX][MAX], resultCount[MAX][MAX];
+int visited[MAX];
+
+int symbolIndex(char c) {
+    for (int i = 0; i < nSymbols; i++)
+        if (symbols[i] == c) return i;
+    return -1;
+}
+
+void dfs(int from, int current) {
+    for (int i = 0; i < epsilonCount[from]; i++) {
+        int next = epsilon[from][i];
+        if (!visited[next]) {
+            visited[next] = 1;
+            closure[current][closureSize[current]++] = next;
+            dfs(next, current);
+        }
+    }
+}
+
+void computeClosures() {
+    for (int i = 0; i < nStates; i++) {
+        memset(visited, 0, sizeof(visited));
+        visited[i] = 1;
+        closureSize[i] = 0;
+        closure[i][closureSize[i]++] = i;
+        dfs(i, i);
+    }
+}
+
+void buildEquivalentNFA() {
+    for (int s = 0; s < nStates; s++) {
+        for (int i = 0; i < closureSize[s]; i++) {
+            int state = closure[s][i];
+            for (int sym = 0; sym < nSymbols; sym++) {
+                for (int t = 0; t < nfaCount[state][sym]; t++) {
+                    int dest = nfa[state][sym][t];
+                    for (int j = 0; j < closureSize[dest]; j++) {
+                        int final = closure[dest][j];
+                        int exists = 0;
+                        for (int x = 0; x < resultCount[sym][s]; x++) {
+                            if (result[sym][s][x] == final) {
+                                exists = 1;
+                                break;
+                            }
+                        }
+                        if (!exists)
+                            result[sym][s][resultCount[sym][s]++] = final;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void printEquivalentNFA() {
+    printf("\nEquivalent NFA (without ε-transitions):\n");
+    for (int s = 0; s < nStates; s++) {
+        for (int sym = 0; sym < nSymbols; sym++) {
+            printf("q%d --%c--> ", s, symbols[sym]);
+            if (resultCount[sym][s] == 0) {
+                printf("∅");
+            } else {
+                for (int i = 0; i < resultCount[sym][s]; i++) {
+                    printf("q%d ", result[sym][s][i]);
+                }
+            }
+            printf("\n");
+        }
+    }
+}
+
+int main() {
+    int nEps, nTrans;
+    printf("Enter number of states: ");
+    scanf("%d", &nStates);
+
+    printf("Enter number of input symbols (excluding ε): ");
+    scanf("%d", &nSymbols);
+
+    printf("Enter the symbols: ");
+    for (int i = 0; i < nSymbols; i++)
+        scanf(" %c", &symbols[i]);
+
+    printf("Enter number of ε-transitions: ");
+    scanf("%d", &nEps);
+    printf("Enter ε-transitions (from to):\n");
+    for (int i = 0; i < nEps; i++) {
+        int from, to;
+        scanf("%d %d", &from, &to);
+        epsilon[from][epsilonCount[from]++] = to;
+    }
+
+    printf("Enter number of regular transitions: ");
+    scanf("%d", &nTrans);
+    printf("Enter transitions (from symbol to):\n");
+    for (int i = 0; i < nTrans; i++) {
+        int from, to;
+        char sym;
+        scanf("%d %c %d", &from, &sym, &to);
+        int idx = symbolIndex(sym);
+        if (idx == -1) {
+            printf("Invalid symbol '%c'\n", sym);
+            return 1;
+        }
+        nfa[from][idx][nfaCount[from][idx]++] = to;
+    }
+
+    computeClosures();
+    buildEquivalentNFA();
+    printEquivalentNFA();
+
+    return 0;
+}
+**************************************************************
+
 #include <stdio.h>
 #include <stdlib.h>
 
