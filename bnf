@@ -41,6 +41,24 @@ void printAST(AST *root, int level) {
     printAST(root->left, level + 1);
     printAST(root->right, level + 1);
 }
+int evaluate(AST *root) {
+    if (!root) return 0;
+
+    if (strcmp(root->nodeType, "NUM") == 0)
+        return root->value;
+
+    int leftVal = evaluate(root->left);
+    int rightVal = root->right ? evaluate(root->right) : 0;
+
+    if (strcmp(root->nodeType, "+") == 0) return leftVal + rightVal;
+    if (strcmp(root->nodeType, "-") == 0) return leftVal - rightVal;
+    if (strcmp(root->nodeType, "*") == 0) return leftVal * rightVal;
+    if (strcmp(root->nodeType, "/") == 0) return leftVal / rightVal;
+    if (strcmp(root->nodeType, "NEG") == 0) return -leftVal;
+
+    return 0; // fallback
+}
+
 %}
 
 %union {
@@ -60,6 +78,7 @@ void printAST(AST *root, int level) {
 start : expr { 
             printf("\nAbstract Syntax Tree:\n"); 
             printAST($1, 0); 
+            printf("\nResult: %d\n", evaluate($1));
         }
       ;
 
