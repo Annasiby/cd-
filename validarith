@@ -1,0 +1,53 @@
+%{
+#include "y.tab.h"
+%}
+
+%%
+[0-9]+              { return NUMBER; }        /* Numbers */
+[a-zA-Z][a-zA-Z0-9]* { return IDENTIFIER; }   /* Identifiers */
+[+\-*/()]           { return yytext[0]; }     /* Operators and parentheses */
+[ \t\n]             ;                         /* Ignore whitespace */
+.                   { return INVALID; }       /* Any invalid character */
+%%
+
+%{
+#include <stdio.h>
+#include <stdlib.h>
+
+int yyerror(const char *s);
+int yylex(void);
+%}
+
+%token NUMBER IDENTIFIER INVALID
+
+%%
+input:  expr '\n'       { printf("Valid arithmetic expression\n"); return 0; }
+     |  expr             { printf("Valid arithmetic expression\n"); return 0; }
+     ;
+
+expr:  expr '+' term     /* E → E + T */
+     | expr '-' term     /* E → E - T */
+     | term              /* E → T */
+     ;
+
+term:  term '*' factor   /* T → T * F */
+     | term '/' factor   /* T → T / F */
+     | factor            /* T → F */
+     ;
+
+factor: '(' expr ')'     /* F → (E) */
+       | NUMBER
+       | IDENTIFIER
+       ;
+%%
+
+int main() {
+    printf("Enter an arithmetic expression: ");
+    yyparse();
+    return 0;
+}
+
+int yyerror(const char *s) {
+    printf("Invalid arithmetic expression\n");
+    exit(1);
+}
